@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -19,13 +21,21 @@ func DeleteResources(ctx context.Context, c client.Client, objects []client.Obje
 	return nil
 }
 
-func RemoveStringFromSlice(slice []string, s string) []string {
-	var result []string
-	for _, item := range slice {
-		if item == s {
+func RemoveFinalizer(object metav1.Object, finalizer string) error {
+	var found bool
+	var labels []string
+	for _, label := range object.GetFinalizers() {
+		if label == finalizer {
+			found = true
 			continue
 		}
-		result = append(result, item)
+		labels = append(labels, label)
 	}
-	return result
+
+	if !found {
+		return fmt.Errorf("finalizer %s not found on object %s", finalizer, object.GetName())
+	}
+
+	object.SetFinalizers(labels)
+	return nil
 }
