@@ -1,0 +1,88 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Patch Level'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
+
+jobs:
+  generate-tag:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Generate tag
+        id: tag_generator
+        uses: anothrNick/github-tag-action@1.67.0
+        env:
+          DEFAULT_BUMP: ${{ github.event.inputs.level }}
+          WITH_V: true
+          DRY_RUN: true
+    outputs:
+      new_tag: ${{ steps.tag_generator.outputs.new_tag }}
+  update-changelog:
+    runs-on: ubuntu-22.04
+    needs:
+      - generate-tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Configure git user
+        run: |
+          git config user.email "actions-bot@github.com"
+          git config user.name "GitHub Actions (run by ${{ github.actor }})"
+      - name: Update CHANGELOG
+        uses: thomaseizinger/keep-a-changelog-new-release@v1
+        with:
+          version: ${{ needs.generate-tag.outputs.new_tag }}
+      - name: Prettify CHANGELOG
+        uses: creyD/prettier_action@v4.3
+        with:
+          only_changed: true
+          prettier_options: --write CHANGELOG.md
+          commit_message: Update CHANGELOG (Release ${{ needs.generate-tag.outputs.new_tag }})
+          file_pattern: CHANGELOG.md
+      - name: Commit updated CHANGELOG
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update CHANGELOG (Release ${{ needs.generate-tag.outputs.new_tag }})
+          file_pattern: CHANGELOG.md
+  create-release:
+    runs-on: ubuntu-22.04
+    needs:
+      - generate-tag
+      - update-changelog
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Get CHANGELOG entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          version: ${{ needs.generate-tag.outputs.new_tag }}
+      - name: Create tag
+        uses: anothrNick/github-tag-action@1.67.0
+        env:
+          CUSTOM_TAG: ${{ needs.generate-tag.outputs.new_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.generate-tag.outputs.new_tag }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            CHANGELOG.md
+            LICENSE
