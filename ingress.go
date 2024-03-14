@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"maps"
 	"time"
 
+	"github.com/cedrichopf/operator-utils/hash"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,14 +19,28 @@ import (
 func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner metav1.Object, c client.Client, s *runtime.Scheme) (*ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	revisionHash, err := hash.GenerateObjectHash(expected)
+	if err != nil {
+		log.Error(
+			err, "Unable to generate revision hash for ingress",
+			"Ingress.Name", expected.Name,
+			"Ingress.Namespace", expected.Namespace,
+		)
+		return nil, err
+	}
+	hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
+
 	ingress := &networkingv1.Ingress{}
-	err := c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, ingress)
+	err = c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, ingress)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info(
 			"Creating new ingress",
 			"Ingress.Name", expected.Name,
 			"Ingress.Namespace", expected.Namespace,
 		)
+
+		// Add revision hash label for reconcile
+		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -51,7 +67,27 @@ func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner
 		return nil, err
 	}
 
-	//TODO check state
+	// Check ingress
+	if revisionHash != ingress.Labels[hash.REVISION_HASH_LABEL] {
+		log.Info(
+			"Updating outdated ingress",
+			"Ingress.Name", expected.Name,
+			"Ingress.Namespace", expected.Namespace,
+		)
+
+		maps.Copy(expected.Labels, hashLabel)
+
+		err = c.Update(ctx, expected)
+		if err != nil {
+			log.Error(
+				err,
+				"Unable to update ingress",
+				"Ingress.Name", expected.Name,
+				"Ingress.Namespace", expected.Namespace,
+			)
+			return nil, err
+		}
+	}
 
 	return nil, nil
 }

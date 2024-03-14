@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"maps"
 	"time"
 
+	"github.com/cedrichopf/operator-utils/hash"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,14 +19,28 @@ import (
 func ReconcileService(ctx context.Context, expected *corev1.Service, owner metav1.Object, c client.Client, s *runtime.Scheme) (*ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	revisionHash, err := hash.GenerateObjectHash(expected)
+	if err != nil {
+		log.Error(
+			err, "Unable to generate revision hash for service",
+			"Service.Name", expected.Name,
+			"Service.Namespace", expected.Namespace,
+		)
+		return nil, err
+	}
+	hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
+
 	service := &corev1.Service{}
-	err := c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, service)
+	err = c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, service)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info(
 			"Creating new service",
 			"Service.Name", expected.Name,
 			"Service.Namespace", expected.Namespace,
 		)
+
+		// Add revision hash label for reconcile
+		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -51,7 +67,27 @@ func ReconcileService(ctx context.Context, expected *corev1.Service, owner metav
 		return nil, err
 	}
 
-	//TODO check state
+	// Check service
+	if revisionHash != service.Labels[hash.REVISION_HASH_LABEL] {
+		log.Info(
+			"Updating outdated service",
+			"Service.Name", expected.Name,
+			"Service.Namespace", expected.Namespace,
+		)
+
+		maps.Copy(expected.Labels, hashLabel)
+
+		err = c.Update(ctx, expected)
+		if err != nil {
+			log.Error(
+				err,
+				"Unable to update service",
+				"Service.Name", expected.Name,
+				"Service.Namespace", expected.Namespace,
+			)
+			return nil, err
+		}
+	}
 
 	return nil, nil
 }

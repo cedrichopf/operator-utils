@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"maps"
 	"time"
 
+	"github.com/cedrichopf/operator-utils/hash"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,14 +19,28 @@ import (
 func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner metav1.Object, c client.Client, s *runtime.Scheme) (*ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	revisionHash, err := hash.GenerateObjectHash(expected)
+	if err != nil {
+		log.Error(
+			err, "Unable to generate revision hash for configmap",
+			"ConfigMap.Name", expected.Name,
+			"ConfigMap.Namespace", expected.Namespace,
+		)
+		return nil, err
+	}
+	hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
+
 	configMap := &corev1.ConfigMap{}
-	err := c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, configMap)
+	err = c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, configMap)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info(
 			"Creating new configmap",
 			"ConfigMap.Name", expected.Name,
 			"ConfigMap.Namespace", expected.Namespace,
 		)
+
+		// Add revision hash label for reconcile
+		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -51,7 +67,27 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 		return nil, err
 	}
 
-	//TODO check state
+	// Check configmap
+	if revisionHash != configMap.Labels[hash.REVISION_HASH_LABEL] {
+		log.Info(
+			"Updating outdated configmap",
+			"ConfigMap.Name", expected.Name,
+			"ConfigMap.Namespace", expected.Namespace,
+		)
+
+		maps.Copy(expected.Labels, hashLabel)
+
+		err = c.Update(ctx, expected)
+		if err != nil {
+			log.Error(
+				err,
+				"Unable to update configmap",
+				"ConfigMap.Name", expected.Name,
+				"ConfigMap.Namespace", expected.Namespace,
+			)
+			return nil, err
+		}
+	}
 
 	return nil, nil
 }

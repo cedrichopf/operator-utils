@@ -19,8 +19,19 @@ import (
 func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner metav1.Object, c client.Client, s *runtime.Scheme) (*ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	revisionHash, err := hash.GenerateObjectHash(expected)
+	if err != nil {
+		log.Error(
+			err, "Unable to generate revision hash for deployment",
+			"Deployment.Name", expected.Name,
+			"Deployment.Namespace", expected.Namespace,
+		)
+		return nil, err
+	}
+	hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
+
 	deployment := &appsv1.Deployment{}
-	err := c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, deployment)
+	err = c.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, deployment)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info(
 			"Creating new deployment",
@@ -29,16 +40,6 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 		)
 
 		// Add revision hash label for reconcile
-		revisionHash, err := hash.GenerateObjectHash(expected)
-		if err != nil {
-			log.Error(
-				err, "Unable to generate revision hash for deployment",
-				"Deployment.Name", expected.Name,
-				"Deployment.Namespace", expected.Namespace,
-			)
-			return nil, err
-		}
-		hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -69,24 +70,13 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 	}
 
 	// Check deployment
-	revisionHash, err := hash.GenerateObjectHash(expected)
-	if err != nil {
-		log.Error(
-			err,
-			"Unable to generate revision hash for deployment",
-			"Deployment.Name", expected.Name,
-			"Deployment.Namespace", expected.Namespace,
-		)
-		return nil, err
-	}
-	if revisionHash != deployment.Labels["app.kubernetes.io/revision-hash"] {
+	if revisionHash != deployment.Labels[hash.REVISION_HASH_LABEL] {
 		log.Info(
 			"Updating outdated deployment",
 			"Deployment.Name", expected.Name,
 			"Deployment.Namespace", expected.Namespace,
 		)
 
-		hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)
