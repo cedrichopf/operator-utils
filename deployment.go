@@ -5,6 +5,7 @@ import (
 	"maps"
 	"time"
 
+	"github.com/cedrichopf/operator-utils/hash"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +29,7 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 		)
 
 		// Add revision hash label for reconcile
-		revisionHash, err := GenerateObjectHash(expected)
+		revisionHash, err := hash.GenerateObjectHash(expected)
 		if err != nil {
 			log.Error(
 				err, "Unable to generate revision hash for deployment",
@@ -37,7 +38,7 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 			)
 			return nil, err
 		}
-		hashLabel := GenerateRevisionHashLabel(revisionHash)
+		hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -68,7 +69,7 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 	}
 
 	// Check deployment
-	revisionHash, err := GenerateObjectHash(expected)
+	revisionHash, err := hash.GenerateObjectHash(expected)
 	if err != nil {
 		log.Error(
 			err,
@@ -85,7 +86,7 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 			"Deployment.Namespace", expected.Namespace,
 		)
 
-		hashLabel := GenerateRevisionHashLabel(revisionHash)
+		hashLabel := hash.GenerateRevisionHashLabel(revisionHash)
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)

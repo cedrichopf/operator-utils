@@ -1,4 +1,4 @@
-package utils
+package hash
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const REVISION_HASH_LABEL = "app.kubernetes.io/revision-hash"
 
 func GenerateObjectHash(object interface{}) (string, error) {
 	data, err := json.Marshal(object)
@@ -22,7 +24,7 @@ func GenerateObjectHash(object interface{}) (string, error) {
 
 func GenerateRevisionHashLabel(revisionHash string) map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/revision-hash": revisionHash,
+		REVISION_HASH_LABEL: revisionHash,
 	}
 }
 
