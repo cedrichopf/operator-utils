@@ -40,6 +40,9 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 		)
 
 		// Add revision hash label for reconcile
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -57,6 +60,7 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 
 			return &ctrl.Result{RequeueAfter: 5 * time.Second}, err
 		}
+		return nil, nil
 	} else if err != nil {
 		log.Error(
 			err,
@@ -75,6 +79,9 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 			"ConfigMap.Namespace", expected.Namespace,
 		)
 
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)
