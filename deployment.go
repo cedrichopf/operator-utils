@@ -40,6 +40,9 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 		)
 
 		// Add revision hash label for reconcile
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -77,6 +80,9 @@ func ReconcileDeployment(ctx context.Context, expected *appsv1.Deployment, owner
 			"Deployment.Namespace", expected.Namespace,
 		)
 
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)

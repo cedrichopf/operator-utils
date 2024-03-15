@@ -40,6 +40,9 @@ func ReconcileSecret(ctx context.Context, expected *corev1.Secret, owner metav1.
 		)
 
 		// Add revision hash label for reconcile
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -75,6 +78,9 @@ func ReconcileSecret(ctx context.Context, expected *corev1.Secret, owner metav1.
 			"Secret.Namespace", expected.Namespace,
 		)
 
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)

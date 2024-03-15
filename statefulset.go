@@ -40,6 +40,9 @@ func ReconcileStatefulSet(ctx context.Context, expected *appsv1.StatefulSet, own
 		)
 
 		// Add revision hash label for reconcile
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -75,6 +78,9 @@ func ReconcileStatefulSet(ctx context.Context, expected *appsv1.StatefulSet, own
 			"StatefulSet.Namespace", expected.Namespace,
 		)
 
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)

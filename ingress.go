@@ -40,6 +40,9 @@ func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner
 		)
 
 		// Add revision hash label for reconcile
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = ctrl.SetControllerReference(owner, expected, s)
@@ -75,6 +78,9 @@ func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner
 			"Ingress.Namespace", expected.Namespace,
 		)
 
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
 		maps.Copy(expected.Labels, hashLabel)
 
 		err = c.Update(ctx, expected)
