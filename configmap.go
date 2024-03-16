@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"maps"
 	"time"
 
 	"github.com/cedrichopf/operator-utils/hash"
@@ -40,7 +39,12 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 		)
 
 		// Add revision hash label for reconcile
-		maps.Copy(expected.Labels, hashLabel)
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -57,6 +61,7 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 
 			return &ctrl.Result{RequeueAfter: 5 * time.Second}, err
 		}
+		return nil, nil
 	} else if err != nil {
 		log.Error(
 			err,
@@ -75,7 +80,12 @@ func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner m
 			"ConfigMap.Namespace", expected.Namespace,
 		)
 
-		maps.Copy(expected.Labels, hashLabel)
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = c.Update(ctx, expected)
 		if err != nil {

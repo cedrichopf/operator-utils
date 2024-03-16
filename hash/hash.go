@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"maps"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +34,9 @@ func AddRevisionHashLabel(object metav1.Object) error {
 	}
 	hashLabel := GenerateRevisionHashLabel(revisionHash)
 	labels := object.GetLabels()
-	maps.Copy(labels, hashLabel)
+	for key, value := range hashLabel {
+		labels[key] = value
+	}
 	object.SetLabels(labels)
 	return nil
 }

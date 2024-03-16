@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"maps"
 	"time"
 
 	"github.com/cedrichopf/operator-utils/hash"
@@ -40,7 +39,12 @@ func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner
 		)
 
 		// Add revision hash label for reconcile
-		maps.Copy(expected.Labels, hashLabel)
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -75,7 +79,12 @@ func ReconcileIngress(ctx context.Context, expected *networkingv1.Ingress, owner
 			"Ingress.Namespace", expected.Namespace,
 		)
 
-		maps.Copy(expected.Labels, hashLabel)
+		if expected.Labels == nil {
+			expected.Labels = make(map[string]string)
+		}
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = c.Update(ctx, expected)
 		if err != nil {
