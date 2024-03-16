@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"maps"
 	"time"
 
 	"github.com/cedrichopf/operator-utils/hash"
@@ -43,7 +42,9 @@ func ReconcileSecret(ctx context.Context, expected *corev1.Secret, owner metav1.
 		if expected.Labels == nil {
 			expected.Labels = make(map[string]string)
 		}
-		maps.Copy(expected.Labels, hashLabel)
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = ctrl.SetControllerReference(owner, expected, s)
 		if err != nil {
@@ -81,7 +82,9 @@ func ReconcileSecret(ctx context.Context, expected *corev1.Secret, owner metav1.
 		if expected.Labels == nil {
 			expected.Labels = make(map[string]string)
 		}
-		maps.Copy(expected.Labels, hashLabel)
+		for key, value := range hashLabel {
+			expected.Labels[key] = value
+		}
 
 		err = c.Update(ctx, expected)
 		if err != nil {
