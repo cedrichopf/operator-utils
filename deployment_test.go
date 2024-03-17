@@ -17,7 +17,7 @@ const (
 	deploymentName = "sample-deployment"
 )
 
-var _ = Describe("Deployment", func() {
+var _ = Describe("Reconcile Deployment", func() {
 	AfterEach(func() {
 		err := k8sClient.DeleteAllOf(context.Background(), &appsv1.Deployment{}, client.InNamespace(namespace))
 		Expect(err).ToNot(HaveOccurred())
