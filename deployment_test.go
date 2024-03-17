@@ -56,7 +56,7 @@ var _ = Describe("Deployment", func() {
 
 			result, err := utils.ReconcileDeployment(context.Background(), deployment, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 		})
 
 		It("updates an outdated Deployment", func() {
@@ -91,7 +91,7 @@ var _ = Describe("Deployment", func() {
 
 			result, err := utils.ReconcileDeployment(context.Background(), deployment, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 
 			updatedDeployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -124,7 +124,7 @@ var _ = Describe("Deployment", func() {
 
 			result, err = utils.ReconcileDeployment(context.Background(), updatedDeployment, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 		})
 	})
 
@@ -144,7 +144,7 @@ var _ = Describe("Deployment", func() {
 
 			result, err := utils.ReconcileDeployment(context.Background(), deployment, invalidOwner, k8sClient, testEnv.Scheme)
 			Expect(err).To(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result).To(Equal(utils.ReconcileResult{}))
 		})
 	})
 })

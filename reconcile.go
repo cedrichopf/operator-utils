@@ -14,14 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-type ReconcileParams struct {
-	Context  context.Context
-	Client   client.Client
-	Scheme   *runtime.Scheme
-	Kind     string
-	Expected client.Object
-	Owner    metav1.Object
-
+type reconcileParams struct {
+	context  context.Context
+	client   client.Client
+	scheme   *runtime.Scheme
+	kind     string
+	expected client.Object
+	owner    metav1.Object
 	// Temporary object for fetching object state from cluster
 	tmpObj client.Object
 }
@@ -32,14 +31,14 @@ type ReconcileResult struct {
 	RequeueAfter time.Duration
 }
 
-func reconcileResource(params *ReconcileParams) (ReconcileResult, error) {
-	log := log.FromContext(params.Context)
+func reconcileResource(params *reconcileParams) (ReconcileResult, error) {
+	log := log.FromContext(params.context)
 
-	kind := params.Kind
-	name := params.Expected.GetName()
-	namespace := params.Expected.GetNamespace()
+	kind := params.kind
+	name := params.expected.GetName()
+	namespace := params.expected.GetNamespace()
 
-	revisionHash, err := hash.GenerateObjectHash(params.Expected)
+	revisionHash, err := hash.GenerateObjectHash(params.expected)
 	if err != nil {
 		log.Error(
 			err, "Unable to generate revision hash for object",
@@ -50,7 +49,7 @@ func reconcileResource(params *ReconcileParams) (ReconcileResult, error) {
 		return ReconcileResult{}, err
 	}
 
-	err = params.Client.Get(params.Context, types.NamespacedName{Name: name, Namespace: namespace}, params.tmpObj)
+	err = params.client.Get(params.context, types.NamespacedName{Name: name, Namespace: namespace}, params.tmpObj)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info(
 			"Creating new object",
@@ -60,19 +59,19 @@ func reconcileResource(params *ReconcileParams) (ReconcileResult, error) {
 		)
 
 		// Add revision hash label for reconcile
-		labels := params.Expected.GetLabels()
+		labels := params.expected.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
 		labels[hash.REVISION_HASH_LABEL] = revisionHash
-		params.Expected.SetLabels(labels)
+		params.expected.SetLabels(labels)
 
-		err = ctrl.SetControllerReference(params.Owner, params.Expected, params.Scheme)
+		err = ctrl.SetControllerReference(params.owner, params.expected, params.scheme)
 		if err != nil {
 			return ReconcileResult{}, err
 		}
 
-		err = params.Client.Create(params.Context, params.Expected)
+		err = params.client.Create(params.context, params.expected)
 		if err != nil {
 			log.Error(
 				err,
@@ -111,14 +110,14 @@ func reconcileResource(params *ReconcileParams) (ReconcileResult, error) {
 			"Object.Namespace", namespace,
 		)
 
-		labels = params.Expected.GetLabels()
+		labels = params.expected.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
 		labels[hash.REVISION_HASH_LABEL] = revisionHash
-		params.Expected.SetLabels(labels)
+		params.expected.SetLabels(labels)
 
-		err = params.Client.Update(params.Context, params.Expected)
+		err = params.client.Update(params.context, params.expected)
 		if err != nil {
 			log.Error(
 				err,

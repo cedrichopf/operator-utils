@@ -9,14 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner metav1.Object, c client.Client, s *runtime.Scheme) (ReconcileResult, error) {
-	return reconcileResource(&ReconcileParams{
-		Context:  ctx,
-		Client:   c,
-		Scheme:   s,
-		Kind:     "ConfigMap",
-		Expected: expected,
+func ReconcileConfigMap(ctx context.Context, expected *corev1.ConfigMap, owner metav1.Object, client client.Client, scheme *runtime.Scheme) (ReconcileResult, error) {
+	return reconcileResource(&reconcileParams{
+		context:  ctx,
+		client:   client,
+		scheme:   scheme,
+		kind:     "ConfigMap",
+		expected: expected,
+		owner:    owner,
 		tmpObj:   &corev1.ConfigMap{},
-		Owner:    owner,
 	})
 }
