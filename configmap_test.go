@@ -16,7 +16,7 @@ const (
 	configMapName = "sample-configmap"
 )
 
-var _ = Describe("ConfigMap", func() {
+var _ = Describe("Reconcile ConfigMap", func() {
 	AfterEach(func() {
 		err := k8sClient.DeleteAllOf(context.Background(), &corev1.ConfigMap{}, client.InNamespace(namespace))
 		Expect(err).ToNot(HaveOccurred())
@@ -33,7 +33,7 @@ var _ = Describe("ConfigMap", func() {
 
 			result, err := utils.ReconcileConfigMap(context.Background(), configMap, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 		})
 
 		It("updates an outdated ConfigMap", func() {
@@ -49,7 +49,7 @@ var _ = Describe("ConfigMap", func() {
 
 			result, err := utils.ReconcileConfigMap(context.Background(), configMap, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 
 			updatedConfigMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -63,7 +63,7 @@ var _ = Describe("ConfigMap", func() {
 
 			result, err = utils.ReconcileConfigMap(context.Background(), updatedConfigMap, owner, k8sClient, testEnv.Scheme)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result.Updated).To(Equal(true))
 		})
 	})
 
@@ -83,7 +83,7 @@ var _ = Describe("ConfigMap", func() {
 
 			result, err := utils.ReconcileConfigMap(context.Background(), configMap, invalidOwner, k8sClient, testEnv.Scheme)
 			Expect(err).To(HaveOccurred())
-			Expect(result).To(BeNil())
+			Expect(result).To(Equal(utils.ReconcileResult{}))
 		})
 	})
 })
