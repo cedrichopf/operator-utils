@@ -6,6 +6,8 @@ import (
 	"net/url"
 )
 
+// HostFromURL returns the host of a given URL or returns an error if the host cannot be
+// extracted from the URL
 func HostFromURL(urlString string) (string, error) {
 	u, err := url.Parse(urlString)
 	if err != nil {
