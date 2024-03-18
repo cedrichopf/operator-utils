@@ -34,6 +34,9 @@ func AddRevisionHashLabel(object metav1.Object) error {
 	}
 	hashLabel := GenerateRevisionHashLabel(revisionHash)
 	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	for key, value := range hashLabel {
 		labels[key] = value
 	}
