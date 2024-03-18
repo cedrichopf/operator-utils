@@ -2,16 +2,18 @@ package utils
 
 import (
 	"context"
-	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func DeleteResources(ctx context.Context, c client.Client, objects []client.Object) error {
+// DeleteResources takes a slice of Kubernetes objects and deletes them from a Kubernetes cluster
+//
+// DeleteResources returns an error if it fails to delete the object
+func DeleteResources(ctx context.Context, client client.Client, objects []client.Object) error {
 	for _, object := range objects {
-		err := c.Delete(ctx, object)
+		err := client.Delete(ctx, object)
 		if err != nil && apierrors.IsNotFound(err) {
 			continue
 		} else if err != nil {
@@ -21,7 +23,10 @@ func DeleteResources(ctx context.Context, c client.Client, objects []client.Obje
 	return nil
 }
 
-func RemoveFinalizer(object metav1.Object, finalizer string) error {
+// RemoveFinalizer deletes a given finalizer from a Kubernetes object
+//
+// RemoveFinalizer returns a bool value that indicates if the given finalizer has been removed
+func RemoveFinalizer(object metav1.Object, finalizer string) bool {
 	var found bool
 	var labels []string
 	for _, label := range object.GetFinalizers() {
@@ -33,9 +38,9 @@ func RemoveFinalizer(object metav1.Object, finalizer string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("finalizer %s not found on object %s", finalizer, object.GetName())
+		return false
 	}
 
 	object.SetFinalizers(labels)
-	return nil
+	return true
 }
