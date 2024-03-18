@@ -1,6 +1,7 @@
 package network
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 )
@@ -10,5 +11,9 @@ func HostFromURL(urlString string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to get host from url: %v", err)
 	}
-	return u.Hostname(), nil
+	host := u.Hostname()
+	if host == "" {
+		return "", errors.New("error while getting hostname from url, got empty hostname")
+	}
+	return host, nil
 }
