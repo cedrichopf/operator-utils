@@ -9,14 +9,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ReconcileStatefulSet takes a StatefulSet and creates or updates it on a Kubernetes cluster. It will
+// generate a revision hash that will be added to the object as a label and add the controller reference to
+// the given owner object.
+//
+// A successful ReconcileStatefulSet returns a ReconcileResult and nil.
+// A failed ReconcileStatefulSet returns an empty ReconsileResult and an error.
 func ReconcileStatefulSet(ctx context.Context, expected *appsv1.StatefulSet, owner metav1.Object, client client.Client, scheme *runtime.Scheme) (ReconcileResult, error) {
-	return reconcileResource(&reconcileParams{
-		context:  ctx,
-		client:   client,
-		scheme:   scheme,
+	return reconcileResource(&ReconcileParams{
+		Context:  ctx,
+		Client:   client,
+		Scheme:   scheme,
 		kind:     "StatefulSet",
-		expected: expected,
-		owner:    owner,
+		Expected: expected,
+		Owner:    owner,
 		tmpObj:   &appsv1.StatefulSet{},
 	})
 }
